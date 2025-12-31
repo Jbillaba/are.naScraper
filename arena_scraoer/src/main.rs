@@ -1,53 +1,74 @@
 #[derive(Debug)]
 struct Block {
-    image: Option<String>,
+    url: String,
+    image: String,
 }
 
-fn grab(){
-    let response = reqwest::blocking::get("https://www.are.na/andreia-de-matos/food-illustration-dszkfpll53g");
-    let html_content = response.unwrap().text().unwrap();
-    let document = scraper::Html::parse_document(&html_content);
+fn main() {
 
-    let html_block_selector = scraper::Selector::parse("div.PJLV").unwrap();
-    let html_blocks = document.select(&html_block_selector);
-    let mut blocks: Vec<Block> = Vec::new();
+    let mut blocks : Vec<Block> = Vec::new();
 
+    let browser = headless_chrome::Browser::default().unwrap();
+    let tab = browser.new_tab().unwrap();
+    tab.navigate_to("https://www.are.na/andreia-de-matos/food-illustration-dszkfpll53g").unwrap();
+    let html_blocks = tab.wait_for_elements("div.virtuoso-grid-item").unwrap();
+
+    std::fs::write("screenshot.png", &screenshot_data).unwrap();
+
+    
     for html_block in html_blocks {
+        let url = html_block
+            .wait_for_element("a")
+            .unwrap()
+            .get_attributes()
+            .unwrap()
+            .unwrap()
+            .get(1)
+            .unwrap()
+            .to_owned();
+
         let image = html_block
-            .select(&scraper::Selector::parse("img").unwrap())
-            .next()
-            .and_then(|img| img.value().attr("src"))
-            .map(str::to_owned);
+            .wait_for_element("img")
+            .unwrap()
+            .get_attributes()
+            .unwrap()
+            .unwrap()
+            .get(5)
+            .unwrap()
+            .to_owned();
         
+        // let caption = html_block
+        //     .wait_for_element("div.c-lgwVNZ c-dHTEdC c-lgwVNZ-iepcqn-ellipsis-true c-lgwVNZ-gyaQWK-size-xs c-lgwVNZ-ijkKOHM-css")
+        //     .unwrap()
+        //     .get_inner_text()
+        //     .unwrap();
 
         let block = Block {
+            url,
             image,
         };
         
         blocks.push(block);
+        let count = blocks.len();
+        println!("{count}")
     };
-
-    println!("{:?}", blocks);
 
     let path = std::path::Path::new("blocks.csv");
     let mut writer = csv::Writer::from_path(path).unwrap();
 
     writer
-        .write_record(&["image"])
+        .write_record(&["url","image"])
         .unwrap();
 
     for block in blocks {
-        let image = block.image.unwrap();
-        writer.write_record(&[image]).unwrap();
+        let url = block.url;
+        let image = block.image;
+
+        writer.write_record(&[url, image]).unwrap();
     }
 
     writer.flush().unwrap();
     
 
 }
-
-fn main() {
-    grab();
-}
-
 
