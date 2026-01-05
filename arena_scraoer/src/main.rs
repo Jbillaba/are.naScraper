@@ -1,6 +1,7 @@
-use std::time::Duration;
+use std::{future::pending, time::Duration};
 
-use headless_chrome::browser::tab::element;
+use headless_chrome::protocol::cdp::Page::Viewport;
+use scraper::html;
 
 #[derive(Debug)]
 struct Block {
@@ -16,13 +17,20 @@ fn main() {
     let browser = headless_chrome::Browser::default().unwrap();
     let tab = browser.new_tab().unwrap();
     tab.navigate_to("https://www.are.na/andreia-de-matos/food-illustration-dszkfpll53g").unwrap();
-    let html_blocks = tab.wait_for_elements("div.virtuoso-grid-item").unwrap(); 
 
+    let element = tab.wait_for_element("div.virtuoso-grid-item").unwrap();
+
+    element.scroll_into_view();
+
+
+    let html_blocks = tab.wait_for_elements("div.virtuoso-grid-item").unwrap();
     
-
+    // assert_eq!(html_blocks.len(), 23);
 
     
     for html_block in html_blocks {
+
+        
 
         let url = html_block
             .wait_for_element("a")
@@ -40,7 +48,7 @@ fn main() {
             .get_attributes()
             .unwrap()
             .unwrap()
-            .get(1)
+            .get(3)
             .unwrap()
             .to_owned();
         
@@ -57,8 +65,7 @@ fn main() {
         };
         
         blocks.push(block);
-        let count = blocks.len();
-        println!("{count}")
+
     };
 
     let path = std::path::Path::new("blocks.csv");
@@ -80,4 +87,3 @@ fn main() {
     
 
 }
-
